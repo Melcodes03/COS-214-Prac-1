@@ -1,20 +1,37 @@
-A single createConnector(string kind) function with 
-an if/else chain would need to be edited every time 
-a new source is onboarded — a new branch added for 
-each new kind string, and the function recompiled and
-retested. This violates the open-closed principle: 
-the function is never "closed" for modification, since 
-supporting a new source always means changing its 
-existing body.
+Task 1.5 — Why Factory Method is better here than one createConnector(string kind)
+function with an if/else chain. Refer to the open-closed principle. (6 marks)
 
-With Factory Method, adding a new source (e.g. a Kafka 
-connector) means writing a new KafkaConnector and 
-KafkaFactory class — no existing code (ConnectorFactory, 
-Pipeline, or any other concrete factory) is touched 
-or recompiled. The system is open for extension (new 
-factories can be added) but closed for modification 
-(existing classes stay untouched). This also removes 
-a single point of failure — a bug introduced in the 
-if/else chain risks breaking every existing source, 
-whereas a bug in a new subclass is isolated to that 
-one class.
+A single createConnector(string kind) function with an if/else chain would need to
+be edited every time a new source is onboarded — a new branch added for each new
+kind string, and the function recompiled and retested. This violates the
+open-closed principle: the function is never "closed" for modification, since
+supporting a new source always means changing its existing body.
+
+With Factory Method, adding a new source (e.g. a Kafka connector) means writing a
+new KafkaConnector and KafkaFactory class — no existing code (ConnectorFactory,
+Pipeline, or any other concrete factory) is touched or recompiled. The system is
+open for extension (new factories can be added) but closed for modification
+(existing classes stay untouched). This also removes a single point of failure:
+a bug introduced in the if/else chain risks breaking every existing source,
+whereas a bug in a new subclass is isolated to that one class, so Pipeline and
+the other factories keep working exactly as before.
+
+
+Task 1.6 — State which Factory Method participant each of Connector, CsvConnector,
+ConnectorFactory, CsvFactory plays. (8 marks)
+
+- Connector        -> Product
+    Declares the common interface (extract(), getSource()) that all objects
+    created by the factory method must implement.
+
+- CsvConnector     -> ConcreteProduct
+    Implements the Product interface — the specific object actually
+    instantiated and returned.
+
+- ConnectorFactory -> Creator
+    Declares the factory method createConnector() and works only with the
+    abstract Connector type — it never names a concrete connector class.
+
+- CsvFactory       -> ConcreteCreator
+    Overrides createConnector() to instantiate and return one specific
+    ConcreteProduct (CsvConnector).
