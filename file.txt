@@ -1,0 +1,20 @@
+A single createConnector(string kind) function with 
+an if/else chain would need to be edited every time 
+a new source is onboarded — a new branch added for 
+each new kind string, and the function recompiled and
+retested. This violates the open-closed principle: 
+the function is never "closed" for modification, since 
+supporting a new source always means changing its 
+existing body.
+
+With Factory Method, adding a new source (e.g. a Kafka 
+connector) means writing a new KafkaConnector and 
+KafkaFactory class — no existing code (ConnectorFactory, 
+Pipeline, or any other concrete factory) is touched 
+or recompiled. The system is open for extension (new 
+factories can be added) but closed for modification 
+(existing classes stay untouched). This also removes 
+a single point of failure — a bug introduced in the 
+if/else chain risks breaking every existing source, 
+whereas a bug in a new subclass is isolated to that 
+one class.
