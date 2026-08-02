@@ -35,3 +35,38 @@ ConnectorFactory, CsvFactory plays. (8 marks)
 - CsvFactory       -> ConcreteCreator
     Overrides createConnector() to instantiate and return one specific
     ConcreteProduct (CsvConnector).
+
+2.5 — Shallow vs deep copy; which clone() must produce, and why independence matters
+
+A shallow copy duplicates an object's members as-is — if a member is a pointer, 
+both the original and the copy end up pointing at the same underlying data. 
+A deep copy instead duplicates the data itself, so the copy owns entirely independent storage.
+
+clone() in this design must produce a deep, independent copy. Concretely, DeduplicateStep::clone() 
+calls new DeduplicateStep(), allocating a brand-new object on the heap rather than returning this 
+or a shallow bitwise copy — the clone owns its own memory address, distinct from the prototype it 
+was copied from.
+
+This independence matters because of ownership. Each Pipeline that receives a cloned step via 
+addStep() takes ownership of that specific pointer and deletes it in its own destructor. 
+If clone() weren't independent — say, it returned the same pointer the registry already owns:
+two different owners (the registry and the pipeline) would both believe they're responsible for 
+deleting the same object, leading to a double-free, or one owner's delete would invalidate the 
+other's pointer, causing a dangling pointer and undefined behaviour the moment either is used again.
+
+2.6 — Why the registry returns clones, not the stored pointer; what breaks if two pipelines shared one prototype
+
+TransformationRegistry::create() calls it->second->clone() rather than returning it->second directly
+because the registry must retain its own prototype for future use — it's meant to be asked for the 
+same step repeatedly across many pipeline runs, so handing out the original would give it away after 
+the first request.
+
+If two pipelines shared one prototype instance instead of each getting their own clone, several 
+things break. First, ownership becomes ambiguous: both pipelines' destructors would call delete on 
+the same pointer, and the second delete is a double-free — undefined behaviour, and exactly what the 
+practical's memory-leak testing would catch. Second, even before either destructor runs, both pipelines
+are pushing to the very same steps vector, so calling apply() in one pipeline's transform() would be 
+mutating a step that the other pipeline believes is exclusively its own — any per-instance state a 
+step held (if it accumulated data across calls) would leak between two unrelated pipeline runs. 
+clone() avoids all of this by guaranteeing each pipeline holds a fully independent object it can 
+safely own and destroy.
